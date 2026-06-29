@@ -1,0 +1,53 @@
+services:
+  db:  
+    image: mysql:latest
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root 
+      MYSQL_DATABASE: is_project
+    ports:
+      - "3306:3306"
+    networks:
+      - ISP 
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+    environment:
+      - DB_HOST=mysql_db
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=is_project
+      - DB_PORT=3306
+      - JWTPRIVATEKEY=1234567890_abcdjgd
+      - IMG_DIR=/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy 
+    networks:
+      - ISP
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./uploads:/usr/share/nginx/html/img  
+    depends_on:
+      - backend
+    networks:
+      - ISP
+
+networks:
+  ISP:
+    driver: bridge
